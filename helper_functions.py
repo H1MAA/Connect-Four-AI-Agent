@@ -16,7 +16,7 @@ EMPTY = 0
 AI_PIECE = 2
 PLAYER_PIECE = 1
 
-DEPTH = 4  # Depth for the Minimax algorithm
+DEPTH = 2  # Depth for the Minimax algorithm
 
 # Create the board
 def create_board():
@@ -118,7 +118,7 @@ def score_position(board, piece):
     return score
 
 def is_terminal_node(board):
-    return count_connected_fours(board, PLAYER_PIECE) > 0 or count_connected_fours(board, AI_PIECE) > 0 or np.count_nonzero(board) == ROW_COUNT * COLUMN_COUNT
+    return np.count_nonzero(board) == ROW_COUNT * COLUMN_COUNT
 
 def minimax(board, depth, alpha, beta, maximizingPlayer):
     valid_locations = [c for c in range(COLUMN_COUNT) if is_valid_location(board, c)]
@@ -191,33 +191,30 @@ while not game_over:
         if event.type == pygame.QUIT:
             sys.exit()
 
-        if event.type == pygame.MOUSEMOTION:
+        if event.type == pygame.MOUSEMOTION and turn == 0:  # Human player visual feedback
             pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
             posx = event.pos[0]
-            if turn == 0:
-                pygame.draw.circle(screen, RED, (posx, int(SQUARESIZE / 2)), RADIUS)
-            else:
-                pygame.draw.circle(screen, YELLOW, (posx, int(SQUARESIZE / 2)), RADIUS)
+            pygame.draw.circle(screen, RED, (posx, int(SQUARESIZE / 2)), RADIUS)
         pygame.display.update()
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        if event.type == pygame.MOUSEBUTTONDOWN and turn == 0:  # Human turn
             pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
             posx = event.pos[0]
             col = int(math.floor(posx / SQUARESIZE))
 
             if is_valid_location(board, col):
                 row = get_next_open_row(board, col)
-                drop_piece(board, row, col, turn + 1)
+                drop_piece(board, row, col, PLAYER_PIECE)
 
-                # Check connected fours
                 if np.count_nonzero(board) == ROW_COUNT * COLUMN_COUNT:
-                    player1_count = count_connected_fours(board, 1)
-                    player2_count = count_connected_fours(board, 2)
+                    # Count connected fours and display results
+                    player_score = count_connected_fours(board, PLAYER_PIECE)
+                    ai_score = count_connected_fours(board, AI_PIECE)
 
-                    if player1_count > player2_count:
-                        label = myfont.render(f"Player 1 wins! ({player1_count}-{player2_count})", 1, RED)
-                    elif player2_count > player1_count:
-                        label = myfont.render(f"Player 2 wins! ({player2_count}-{player1_count})", 1, YELLOW)
+                    if player_score > ai_score:
+                        label = myfont.render(f"Player wins! ({player_score}-{ai_score})", 1, RED)
+                    elif ai_score > player_score:
+                        label = myfont.render(f"AI wins! ({ai_score}-{player_score})", 1, YELLOW)
                     else:
                         label = myfont.render("It's a tie!", 1, BLUE)
 
@@ -225,8 +222,32 @@ while not game_over:
                     game_over = True
 
                 draw_board(board)
-                turn += 1
-                turn = turn % 2
+                turn = 1
 
-                if game_over:
-                    pygame.time.wait(5000)
+    if turn == 1 and not game_over:  # AI turn
+        col, minimax_score = minimax(board, DEPTH, -math.inf, math.inf, True)
+
+        if is_valid_location(board, col):
+            row = get_next_open_row(board, col)
+            drop_piece(board, row, col, AI_PIECE)
+
+            if np.count_nonzero(board) == ROW_COUNT * COLUMN_COUNT:
+                # Count connected fours and display results
+                player_score = count_connected_fours(board, PLAYER_PIECE)
+                ai_score = count_connected_fours(board, AI_PIECE)
+
+                if player_score > ai_score:
+                    label = myfont.render(f"Player wins! ({player_score}-{ai_score})", 1, RED)
+                elif ai_score > player_score:
+                    label = myfont.render(f"AI wins! ({ai_score}-{player_score})", 1, YELLOW)
+                else:
+                    label = myfont.render("It's a tie!", 1, BLUE)
+
+                screen.blit(label, (40, 10))
+                game_over = True
+
+            draw_board(board)
+            turn = 0
+
+    if game_over:
+        pygame.time.wait(5000)
