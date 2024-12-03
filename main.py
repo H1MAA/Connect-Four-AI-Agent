@@ -1,68 +1,128 @@
-def string_to_array(board_str, rows, cols):
-    """Convert a string representation of the board to a 2D list of integers."""
-    board = []
-    for r in range(rows):
-        board.append([int(cell) for cell in board_str[r * cols:(r + 1) * cols]])
-    return board
+from utils import *
+import numpy as np
+import pygame
+import sys
+import math
 
-def array_to_string(board_array):
-    """Convert a 2D array representation of the board to a string."""
-    return ''.join(''.join(str(cell) for cell in row) for row in board_array)
+# Constants
+ROW_COUNT = 6
+COLUMN_COUNT = 7
 
-def get_valid_moves(board_array):
-    """
-    Get a list of valid columns for a move.
-    A column is valid if it has at least one empty cell (0).
-    """
-    rows = len(board_array)
-    cols = len(board_array[0])
-    valid_moves = []
-    for col in range(cols):
-        if board_array[rows - 1][col] == 0:  # Check the bottom-most cell
-            valid_moves.append(col)
-    return valid_moves
+SQUARESIZE = 100
+RADIUS = int(SQUARESIZE / 2 - 5)
+BLUE = (0, 0, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+YELLOW = (255, 255, 0)
 
-def drop_piece(board_array, col, player):
-    """
-    Drop a piece for the given player into the specified column.
-    
-    Args:
-    - board_array: 2D list representing the board state.
-    - col: The column where the piece should be dropped.
-    - player: The player number (1 or 2) dropping the piece.
+EMPTY = 0
+AI_PIECE = 2
+PLAYER_PIECE = 1
 
-    Returns:
-    - True if the piece was successfully dropped, False otherwise.
-    """
-    rows = len(board_array)
-    for row in range(rows - 1, -1, -1):  # Start from the bottom row
-        if board_array[row][col] == 0:
-            board_array[row][col] = player
-            return True
-    return False  # If no empty cell found in the column
+DEPTH = 4  # Depth for the Minimax algorithm
 
-# Example usage:
-rows, cols = 6, 7
-initial_state = "0" * (rows * cols)  # Empty board represented as a string
-board_array = string_to_array(initial_state, rows, cols)
+def draw_board(board):
+    for c in range(COLUMN_COUNT):
+        for r in range(ROW_COUNT):
+            pygame.draw.rect(screen, BLUE, (c * SQUARESIZE, r * SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE))
+            pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE / 2), int(r * SQUARESIZE + SQUARESIZE + SQUARESIZE / 2)), RADIUS)
+    for c in range(COLUMN_COUNT):
+        for r in range(ROW_COUNT):
+            if board[r][c] == 1:
+                pygame.draw.circle(screen, RED, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
+            elif board[r][c] == 2:
+                pygame.draw.circle(screen, YELLOW, (int(c * SQUARESIZE + SQUARESIZE / 2), height - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
+    pygame.display.update()
 
-print("Initial Board:")
-for row in board_array:
-    print(row)
+# Create the board
+def create_board():
+    return np.zeros((ROW_COUNT, COLUMN_COUNT))
 
-# Test valid moves
-valid_moves = get_valid_moves(board_array)
-print("\nValid Moves:", valid_moves)
+def drop_piece(board, row, col, piece):
+    board[row][col] = piece
 
-# Test dropping pieces
-print("\nDropping pieces...")
-drop_piece(board_array, 3, 1)  # Player 1 drops a piece in column 3
-drop_piece(board_array, 3, 2)  # Player 2 drops a piece in column 3
-drop_piece(board_array, 2, 1)  # Player 1 drops another piece in column 3
-drop_piece(board_array, 2, 1)  # Player 2 drops another piece in column 3
+# Initialize game variables
+board = create_board()
+game_over = False
+turn = 0
 
-print("\nUpdated Board:")
-for row in board_array:
-    print(row)
+pygame.init()
 
-print(f"string representation of the board: {array_to_string(board_array)}")
+width = COLUMN_COUNT * SQUARESIZE
+height = (ROW_COUNT + 1) * SQUARESIZE
+size = (width, height)
+screen = pygame.display.set_mode(size)
+pygame.display.set_caption("Connect 4")
+
+draw_board(board)
+pygame.display.update()
+
+myfont = pygame.font.SysFont("monospace", 50)
+
+while not game_over:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sys.exit()
+
+        if event.type == pygame.MOUSEMOTION and turn == 0:  # Human player visual feedback
+            pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
+            posx = event.pos[0]
+            pygame.draw.circle(screen, RED, (posx, int(SQUARESIZE / 2)), RADIUS)
+        pygame.display.update()
+
+        if event.type == pygame.MOUSEBUTTONDOWN and turn == 0:  # Human turn
+            pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
+            posx = event.pos[0]
+            col = int(math.floor(posx / SQUARESIZE))
+
+            if is_valid_location(board, col):
+                row = get_next_open_row(board, col)
+                drop_piece(board, row, col, PLAYER_PIECE)
+
+                if np.count_nonzero(board) == ROW_COUNT * COLUMN_COUNT:
+                    # Count connected fours and display results
+                    player_score = count_connected_fours(board, PLAYER_PIECE)
+                    ai_score = count_connected_fours(board, AI_PIECE)
+
+                    if player_score > ai_score:
+                        label = myfont.render(f"Player wins! ({player_score}-{ai_score})", 1, RED)
+                    elif ai_score > player_score:
+                        label = myfont.render(f"AI wins! ({ai_score}-{player_score})", 1, YELLOW)
+                    else:
+                        label = myfont.render("It's a tie!", 1, BLUE)
+
+                    screen.blit(label, (40, 10))
+                    game_over = True
+
+                draw_board(board)
+                turn = 1
+
+    if turn == 1 and not game_over:  # AI turn
+        board_str = array_to_string(board)  # Convert board to string
+        print(f"Board string: {board_str}")  # Debugging print statement
+        col, minimax_score = minimax_alpha_beta(board_str, DEPTH, -math.inf, math.inf, True)
+
+        if is_valid_location(board, col):
+            row = get_next_open_row(board, col)
+            drop_piece(board, row, col, AI_PIECE)
+
+            if np.count_nonzero(board) == ROW_COUNT * COLUMN_COUNT:
+                # Count connected fours and display results
+                player_score = count_connected_fours(board, PLAYER_PIECE)
+                ai_score = count_connected_fours(board, AI_PIECE)
+
+                if player_score > ai_score:
+                    label = myfont.render(f"Player wins! ({player_score}-{ai_score})", 1, RED)
+                elif ai_score > player_score:
+                    label = myfont.render(f"AI wins! ({ai_score}-{player_score})", 1, YELLOW)
+                else:
+                    label = myfont.render("It's a tie!", 1, BLUE)
+
+                screen.blit(label, (40, 10))
+                game_over = True
+
+            draw_board(board)
+            turn = 0
+
+    if game_over:
+        pygame.time.wait(5000)

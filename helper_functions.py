@@ -6,12 +6,14 @@ import math
 # Constants
 ROW_COUNT = 6
 COLUMN_COUNT = 7
+
 SQUARESIZE = 100
 RADIUS = int(SQUARESIZE / 2 - 5)
 BLUE = (0, 0, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
+
 EMPTY = 0
 AI_PIECE = 2
 PLAYER_PIECE = 1
@@ -230,6 +232,7 @@ while not game_over:
         if is_valid_location(board, col):
             row = get_next_open_row(board, col)
             drop_piece(board, row, col, AI_PIECE)
+            print(board)
 
             if np.count_nonzero(board) == ROW_COUNT * COLUMN_COUNT:
                 # Count connected fours and display results
