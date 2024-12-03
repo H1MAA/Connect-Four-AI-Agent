@@ -144,8 +144,10 @@ class ConnectFourGUI:
                 pos = pygame.mouse.get_pos()
                 if depth_up_button.collidepoint(pos):
                     self.depth += 1
+                    self.update_sidebar = True  # Update sidebar
                 elif depth_down_button.collidepoint(pos) and self.depth > 1:
                     self.depth -= 1
+                    self.update_sidebar = True  # Update sidebar
                 elif algo_toggle_button.collidepoint(pos):
                     # Toggle algorithm and update the function reference and name
                     if self.algorithm_name == "Minimax Alpha-Beta":
@@ -157,6 +159,7 @@ class ConnectFourGUI:
                     else:
                         self.algorithm_name = "Minimax Alpha-Beta"
                         self.algorithm = minimax_alpha_beta  # Assign function reference
+                    self.update_sidebar = True  # Update sidebar
                 elif back_button.collidepoint(pos):
                     self.state = "menu"
 
@@ -178,7 +181,6 @@ class ConnectFourGUI:
                     pygame.draw.circle(self.screen, YELLOW, (
                         int(c * SQUARESIZE + SQUARESIZE / 2),
                         HEIGHT - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
-        pygame.display.update()
 
     def draw_sidebar(self):
         # Draw the sidebar background
@@ -233,7 +235,6 @@ class ConnectFourGUI:
                 back_button.y + 5,
             ),
         )
-        pygame.display.update()
 
     def main_loop(self):
         while True:
@@ -313,7 +314,6 @@ class ConnectFourGUI:
                         col, _ = self.algorithm(board_str, self.depth, -math.inf, math.inf, True)
 
                     if is_valid_location(self.board, col):
-                        pygame.time.wait(500)  # Add delay for AI move
                         row = get_next_open_row(self.board, col)
                         drop_piece(self.board, row, col, AI_PIECE)
 
