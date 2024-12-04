@@ -51,6 +51,8 @@ class ConnectFourGUI:
 
         # Add a flag to control when to update the scoreboard and button
         self.update_sidebar = True
+        self.current_root = None  # Initialize the current root for visualization
+        self.new_current_root = None  # For navigation
 
     def draw_menu(self):
         self.screen.fill(BLACK)
@@ -181,6 +183,123 @@ class ConnectFourGUI:
                     pygame.draw.circle(self.screen, YELLOW, (
                         int(c * SQUARESIZE + SQUARESIZE / 2),
                         HEIGHT - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
+    
+    def handle_node_click(self, node, pos):
+        if node.rect and node.rect.collidepoint(pos):
+            if node == self.current_root and node.parent:
+                # Clicking on the current root node and it has a parent, so navigate back
+                self.new_current_root = node.parent
+            elif node != self.current_root:
+                # Clicking on a child node, navigate to it
+                self.new_current_root = node
+            # If node == self.current_root and no parent, do nothing (we're at the top)
+            return True
+        # No need to check child nodes since we're handling all nodes here
+        # Alternatively, if you have a list of nodes or want to check child nodes:
+        for child in node.children:
+            if self.handle_node_click(child, pos):
+                return True
+        return False
+
+    def draw_tree(self, screen, node, x, y):
+        node_radius = 30  # Larger node radius for better visibility
+        node_color = RED if node.player == PLAYER_PIECE else YELLOW
+        pygame.draw.circle(screen, node_color, (x, y), node_radius)
+        pygame.draw.circle(screen, WHITE, (x, y), node_radius, 2)
+
+        font = pygame.font.SysFont("monospace", 20)
+        # Display score
+        score_text = font.render(f"Score: {node.score}", True, WHITE)
+        score_rect = score_text.get_rect(center=(x, y - node_radius - 20))
+        screen.blit(score_text, score_rect)
+
+        # Display move
+        move_text = font.render(f"Move: {node.move}", True, WHITE)
+        move_rect = move_text.get_rect(center=(x, y + node_radius + 20))
+        screen.blit(move_text, move_rect)
+
+        # Assign position and rect for click detection
+        node.position = (x, y)
+        node.rect = pygame.Rect(x - node_radius, y - node_radius, node_radius * 2, node_radius * 2)
+
+        # Draw immediate children
+        if node.children:
+            num_children = len(node.children)
+            spacing = 800 // (num_children + 1)  # Adjust horizontal spacing
+            for i, child in enumerate(node.children):
+                child_x = spacing * (i + 1)
+                child_y = y + 200  # Vertical distance to child nodes
+
+                # Draw the connection line
+                pygame.draw.line(screen, WHITE, (x, y + node_radius), (child_x, child_y - 30))
+
+                # Draw child node
+                child_radius = 25
+                child_color = RED if child.player == PLAYER_PIECE else YELLOW
+                pygame.draw.circle(screen, child_color, (child_x, child_y), child_radius)
+                pygame.draw.circle(screen, WHITE, (child_x, child_y), child_radius, 2)
+
+                # Display child's score
+                child_score_text = font.render(f"Score: {child.score}", True, WHITE)
+                child_score_rect = child_score_text.get_rect(center=(child_x, child_y - child_radius - 20))
+                screen.blit(child_score_text, child_score_rect)
+
+                # Display child's move
+                child_move_text = font.render(f"Move: {child.move}", True, WHITE)
+                child_move_rect = child_move_text.get_rect(center=(child_x, child_y + child_radius + 20))
+                screen.blit(child_move_text, child_move_rect)
+
+                # Assign position and rect for click detection
+                child.position = (child_x, child_y)
+                child.rect = pygame.Rect(child_x - child_radius, child_y - child_radius, child_radius * 2, child_radius * 2)
+                child.parent = node  # Ensure the parent reference is set
+
+    def visualize_tree(self):
+        saved_screen = self.screen
+        visualize_screen = pygame.display.set_mode((800, 600))
+        pygame.display.set_caption("Minimax Tree Visualization")
+        running = True
+
+        if self.minimax_tree:
+            self.current_root = self.minimax_tree
+            self.new_current_root = None
+        else:
+            # Display a message if the tree is not available
+            font = pygame.font.SysFont("monospace", 30)
+            text = font.render("No tree to display", True, WHITE)
+            visualize_screen.fill(BLACK)
+            visualize_screen.blit(text, (100, 100))
+            pygame.display.update()
+            pygame.time.wait(2000)
+            pygame.display.set_mode(SIZE)
+            pygame.display.set_caption("Connect 4")
+            self.screen = saved_screen
+            return
+
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    pos = event.pos
+                    self.handle_node_click(self.current_root, pos)
+                    if self.new_current_root:
+                        self.current_root = self.new_current_root
+                        self.new_current_root = None
+
+            visualize_screen.fill(BLACK)
+            if self.current_root:
+                self.draw_tree(visualize_screen, self.current_root, 400, 100)
+            else:
+                font = pygame.font.SysFont("monospace", 30)
+                text = font.render("No tree to display", True, WHITE)
+                visualize_screen.blit(text, (100, 100))
+            pygame.display.update()
+            self.clock.tick(30)
+
+        pygame.display.set_mode(SIZE)
+        pygame.display.set_caption("Connect 4")
+        self.screen = saved_screen
 
     def draw_sidebar(self):
         # Draw the sidebar background
@@ -285,8 +404,7 @@ class ConnectFourGUI:
                             visualize_button = pygame.Rect(WIDTH + 10, HEIGHT - 190, 180, 80)
                             back_button = pygame.Rect(WIDTH + 10, HEIGHT - 90, 180, 40)
                             if visualize_button.collidepoint(pos):
-                                # Future implementation for visualization
-                                pass
+                                self.visualize_tree()
                             elif back_button.collidepoint(pos):
                                 self.state = "menu"
                         elif self.turn == 0 and pos[0] < WIDTH:
@@ -309,9 +427,11 @@ class ConnectFourGUI:
                     # AI's Turn
                     board_str = array_to_string(self.board)
                     if self.algorithm_name == "Minimax":
-                        col, _ = self.algorithm(board_str, self.depth, True)
+                        col, _, minimax_tree_root = self.algorithm(board_str, self.depth, True)
+                        self.minimax_tree = minimax_tree_root
                     else:
-                        col, _ = self.algorithm(board_str, self.depth, -math.inf, math.inf, True)
+                        col, _, minimax_tree_root = self.algorithm(board_str, self.depth, -math.inf, math.inf, True)
+                        self.minimax_tree = minimax_tree_root
 
                     if is_valid_location(self.board, col):
                         row = get_next_open_row(self.board, col)
