@@ -19,7 +19,7 @@ EMPTY = 0
 AI_PIECE = 2
 PLAYER_PIECE = 1
 
-DEPTH = 4  # Depth for the Minimax algorithm
+DEPTH = 1  # Depth for the Minimax algorithm
 
 def draw_board(board):
     for c in range(COLUMN_COUNT):
@@ -100,7 +100,8 @@ while not game_over:
     if turn == 1 and not game_over:  # AI turn
         board_str = array_to_string(board)  # Convert board to string
         print(f"Board string: {board_str}")  # Debugging print statement
-        col, minimax_score = minimax_alpha_beta(board_str, DEPTH, -math.inf, math.inf, True)
+        col, _, minimax_tree_root = minimax(board_str, DEPTH, True)
+        traverse_tree(minimax_tree_root)
 
         if is_valid_location(board, col):
             row = get_next_open_row(board, col)
