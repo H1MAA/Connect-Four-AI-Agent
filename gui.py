@@ -184,18 +184,25 @@ class ConnectFourGUI:
                         int(c * SQUARESIZE + SQUARESIZE / 2),
                         HEIGHT - int(r * SQUARESIZE + SQUARESIZE / 2)), RADIUS)
     
+    def reset_expanded_state(self, node):
+        node.expanded = False
+        for child in node.children:
+            self.reset_expanded_state(child)
+    
     def handle_node_click(self, node, pos):
         if node.rect and node.rect.collidepoint(pos):
             if node == self.current_root and node.parent:
                 # Clicking on the current root node and it has a parent, so navigate back
                 self.new_current_root = node.parent
+                self.reset_expanded_state(self.new_current_root)  # Reset expanded state when navigating back
+                self.new_current_root.expanded = True  # Ensure the new current root is expanded
             elif node != self.current_root:
                 # Clicking on a child node, navigate to it
                 self.new_current_root = node
+                node.expanded = True  # Expand the clicked node
             # If node == self.current_root and no parent, do nothing (we're at the top)
             return True
-        # No need to check child nodes since we're handling all nodes here
-        # Alternatively, if you have a list of nodes or want to check child nodes:
+        # Check child nodes
         for child in node.children:
             if self.handle_node_click(child, pos):
                 return True
@@ -222,8 +229,8 @@ class ConnectFourGUI:
         node.position = (x, y)
         node.rect = pygame.Rect(x - node_radius, y - node_radius, node_radius * 2, node_radius * 2)
 
-        # Draw immediate children
-        if node.children:
+        # Draw immediate children if the node is expanded
+        if node.expanded and node.children:
             num_children = len(node.children)
             spacing = 800 // (num_children + 1)  # Adjust horizontal spacing
             for i, child in enumerate(node.children):
@@ -249,7 +256,7 @@ class ConnectFourGUI:
                 child_move_rect = child_move_text.get_rect(center=(child_x, child_y + child_radius + 20))
                 screen.blit(child_move_text, child_move_rect)
 
-                # Assign position and rect for click detection
+              # Assign position and rect for click detection
                 child.position = (child_x, child_y)
                 child.rect = pygame.Rect(child_x - child_radius, child_y - child_radius, child_radius * 2, child_radius * 2)
                 child.parent = node  # Ensure the parent reference is set
@@ -263,6 +270,8 @@ class ConnectFourGUI:
         if self.minimax_tree:
             self.current_root = self.minimax_tree
             self.new_current_root = None
+            self.reset_expanded_state(self.minimax_tree)  # Reset expanded state
+            self.current_root.expanded = True  # Ensure the root node is expanded
         else:
             # Display a message if the tree is not available
             font = pygame.font.SysFont("monospace", 30)
