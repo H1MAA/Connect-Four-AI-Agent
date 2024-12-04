@@ -202,18 +202,18 @@ class ConnectFourGUI:
         return False
 
     def draw_tree(self, screen, node, x, y):
-        node_radius = 30  # Larger node radius for better visibility
+        node_radius = 40  # Larger node radius for better visibility
         node_color = RED if node.player == PLAYER_PIECE else YELLOW
         pygame.draw.circle(screen, node_color, (x, y), node_radius)
         pygame.draw.circle(screen, WHITE, (x, y), node_radius, 2)
 
         font = pygame.font.SysFont("monospace", 20)
-        # Display score
-        score_text = font.render(f"Score: {node.score}", True, WHITE)
-        score_rect = score_text.get_rect(center=(x, y - node_radius - 20))
+        # Display score inside the circle
+        score_text = font.render(f"{node.score}", True, BLACK)
+        score_rect = score_text.get_rect(center=(x, y))
         screen.blit(score_text, score_rect)
 
-        # Display move
+        # Display move number below the circle
         move_text = font.render(f"Move: {node.move}", True, WHITE)
         move_rect = move_text.get_rect(center=(x, y + node_radius + 20))
         screen.blit(move_text, move_rect)
@@ -234,17 +234,17 @@ class ConnectFourGUI:
                 pygame.draw.line(screen, WHITE, (x, y + node_radius), (child_x, child_y - 30))
 
                 # Draw child node
-                child_radius = 25
+                child_radius = 40  # Larger child node radius
                 child_color = RED if child.player == PLAYER_PIECE else YELLOW
                 pygame.draw.circle(screen, child_color, (child_x, child_y), child_radius)
                 pygame.draw.circle(screen, WHITE, (child_x, child_y), child_radius, 2)
 
-                # Display child's score
-                child_score_text = font.render(f"Score: {child.score}", True, WHITE)
-                child_score_rect = child_score_text.get_rect(center=(child_x, child_y - child_radius - 20))
+                # Display child's score inside the circle
+                child_score_text = font.render(f"{child.score}", True, BLACK)
+                child_score_rect = child_score_text.get_rect(center=(child_x, child_y))
                 screen.blit(child_score_text, child_score_rect)
 
-                # Display child's move
+                # Display child's move number below the circle
                 child_move_text = font.render(f"Move: {child.move}", True, WHITE)
                 child_move_rect = child_move_text.get_rect(center=(child_x, child_y + child_radius + 20))
                 screen.blit(child_move_text, child_move_rect)
